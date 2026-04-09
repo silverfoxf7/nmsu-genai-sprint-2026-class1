@@ -37,6 +37,22 @@ const portLocked = Boolean(process.env.PORT);
 app.use(express.json());
 app.use(express.static("public"));
 
+/** Default: fast mini model + low reasoning effort (override with OPENAI_MODEL / OPENAI_REASONING_EFFORT). */
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const REASONING_EFFORTS = new Set(["low", "medium", "high"]);
+
+function resolveReasoningEffort() {
+  const raw = process.env.OPENAI_REASONING_EFFORT?.trim().toLowerCase();
+  if (!raw) return "low";
+  if (!REASONING_EFFORTS.has(raw)) {
+    console.warn(
+      `[stress-test] Invalid OPENAI_REASONING_EFFORT="${process.env.OPENAI_REASONING_EFFORT}"; using low`
+    );
+    return "low";
+  }
+  return raw;
+}
+
 const stressTestSchema = {
   type: "object",
   additionalProperties: false,
@@ -131,13 +147,15 @@ app.post("/stress-test", async (req, res) => {
     });
   }
 
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5";
+  const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+  const reasoningEffort = resolveReasoningEffort();
   const trimmed = idea.trim();
   const preview =
     trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
 
   devLog(`req ${reqId} start`, {
     model,
+    reasoningEffort,
     mode,
     ideaChars: trimmed.length,
     preview,
@@ -152,6 +170,7 @@ app.post("/stress-test", async (req, res) => {
     const response = await withOpenAiWaitLogging(`req ${reqId}`, () =>
       openai.responses.create({
         model,
+        reasoning: { effort: reasoningEffort },
         input: [
           {
             role: "user",
