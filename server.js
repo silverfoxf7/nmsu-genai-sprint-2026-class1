@@ -37,6 +37,22 @@ const portLocked = Boolean(process.env.PORT);
 app.use(express.json());
 app.use(express.static("public"));
 
+/** Default: fast mini model + low reasoning effort (override with OPENAI_MODEL / OPENAI_REASONING_EFFORT). */
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const REASONING_EFFORTS = new Set(["low", "medium", "high"]);
+
+function resolveReasoningEffort() {
+  const raw = process.env.OPENAI_REASONING_EFFORT?.trim().toLowerCase();
+  if (!raw) return "low";
+  if (!REASONING_EFFORTS.has(raw)) {
+    console.warn(
+      `[stress-test] Invalid OPENAI_REASONING_EFFORT="${process.env.OPENAI_REASONING_EFFORT}"; using low`
+    );
+    return "low";
+  }
+  return raw;
+}
+
 const stressTestSchema = {
   type: "object",
   additionalProperties: false,
@@ -59,6 +75,53 @@ const stressTestSchema = {
   required: ["coreAssumptions", "majorRisks", "fastestValidationTest"],
 };
 
+const STRESS_MODES = ["brutal", "balanced", "supportive"];
+
+/** Default balanced; reject non-string or unknown values. */
+function resolveStressMode(raw) {
+  if (raw === undefined || raw === null) {
+    return { ok: true, mode: "balanced" };
+  }
+  if (typeof raw !== "string") {
+    return {
+      ok: false,
+      error: 'Field "mode" must be a string (brutal, balanced, or supportive).',
+    };
+  }
+  const m = raw.trim().toLowerCase();
+  if (m === "") {
+    return { ok: true, mode: "balanced" };
+  }
+  if (!STRESS_MODES.includes(m)) {
+    return {
+      ok: false,
+      error: `Invalid mode. Use one of: ${STRESS_MODES.join(", ")}.`,
+    };
+  }
+  return { ok: true, mode: m };
+}
+
+const MODE_VOICE = {
+  brutal:
+    "You are a brutally honest startup critic. Aggressively challenge the idea: assume worst cases, name weak logic in plain terms, and do not sugar-coat. Stay professional (no insults or harassment) but be direct and uncompromising.",
+
+  balanced:
+    "You are a skeptical but constructive startup advisor. Question assumptions fairly and point out real risks while staying practical.",
+
+  supportive:
+    'You are an encouraging startup mentor. Briefly acknowledge what could work or what is creative about the idea first. Then surface assumptions and risks as "watch-outs," not attacks. Stay honest and specific, but keep a warm, motivating tone.',
+};
+
+function buildStressTestPrompt(idea, mode) {
+  const voice = MODE_VOICE[mode];
+  return `${voice}
+
+Startup idea:
+${idea}
+
+Return JSON only (no markdown) that matches the schema: core assumptions the founder is making, major risks, and the single fastest validation test to run this week. Be specific to this idea, not generic.`;
+}
+
 app.post("/stress-test", async (req, res) => {
   const reqId = Math.random().toString(36).slice(2, 10);
   const idea = req.body?.idea;
@@ -69,6 +132,13 @@ app.post("/stress-test", async (req, res) => {
       .json({ error: 'Missing or empty "idea" string in JSON body.' });
   }
 
+  const modeResult = resolveStressMode(req.body?.mode);
+  if (!modeResult.ok) {
+    devLog(`req ${reqId} rejected: bad mode`);
+    return res.status(400).json({ error: modeResult.error });
+  }
+  const mode = modeResult.mode;
+
   if (!process.env.OPENAI_API_KEY?.trim()) {
     devLog(`req ${reqId} rejected: OPENAI_API_KEY not set`);
     return res.status(503).json({
@@ -77,23 +147,21 @@ app.post("/stress-test", async (req, res) => {
     });
   }
 
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5";
+  const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+  const reasoningEffort = resolveReasoningEffort();
   const trimmed = idea.trim();
   const preview =
     trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed;
 
   devLog(`req ${reqId} start`, {
     model,
+    reasoningEffort,
+    mode,
     ideaChars: trimmed.length,
     preview,
   });
 
-  const prompt = `You are a skeptical but constructive startup advisor. Stress-test this idea.
-
-Startup idea:
-${trimmed}
-
-Return JSON only (no markdown) that matches the schema: core assumptions the founder is making, major risks, and the single fastest validation test to run this week. Be specific to this idea, not generic.`;
+  const prompt = buildStressTestPrompt(trimmed, mode);
 
   try {
     devLog(`req ${reqId} calling OpenAI responses.create…`);
@@ -102,6 +170,7 @@ Return JSON only (no markdown) that matches the schema: core assumptions the fou
     const response = await withOpenAiWaitLogging(`req ${reqId}`, () =>
       openai.responses.create({
         model,
+        reasoning: { effort: reasoningEffort },
         input: [
           {
             role: "user",

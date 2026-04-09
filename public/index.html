@@ -162,6 +162,31 @@
           0 0 0 2px rgba(255, 204, 51, 0.35);
       }
 
+      label[for="mode"] {
+        margin-top: 1.1rem;
+      }
+
+      select#mode {
+        width: 100%;
+        max-width: 20rem;
+        padding: 0.55rem 0.65rem;
+        font-family: inherit;
+        font-size: 1.25rem;
+        background: #0a2418;
+        color: var(--text);
+        border: 3px solid var(--jungle-3);
+        border-radius: 0;
+        cursor: pointer;
+        box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.35);
+      }
+
+      select#mode:focus {
+        outline: none;
+        border-color: var(--sun);
+        box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.35),
+          0 0 0 2px rgba(255, 204, 51, 0.35);
+      }
+
       button {
         margin-top: 1rem;
         padding: 0.65rem 1.25rem;
@@ -334,8 +359,8 @@
         <div class="title-block">
           <h1>Founder<br />Stress Tester</h1>
           <p class="tagline">
-            Describe your startup idea. The server asks GPT-5 for assumptions, risks, and one fast
-            validation test.
+            Describe your startup idea. The server asks GPT-5.4 mini (low reasoning effort) for
+            assumptions, risks, and one fast validation test.
           </p>
         </div>
 
@@ -347,6 +372,14 @@
       <div class="panel">
         <label for="idea">Startup idea</label>
         <textarea id="idea" placeholder="e.g. A subscription box for…"></textarea>
+
+        <label for="mode">Stress test mode</label>
+        <select id="mode" name="mode">
+          <option value="brutal">Brutal</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="supportive">Supportive</option>
+        </select>
+
         <button type="button" id="go">Run stress test</button>
 
         <pre id="out" aria-live="polite"></pre>
@@ -419,6 +452,7 @@
 
     <script>
       const ideaEl = document.getElementById("idea");
+      const modeEl = document.getElementById("mode");
       const outEl = document.getElementById("out");
       const goBtn = document.getElementById("go");
 
@@ -426,11 +460,12 @@
         outEl.textContent = "Loading…";
         outEl.classList.remove("err");
         const idea = ideaEl.value.trim();
+        const mode = modeEl.value;
         try {
           const res = await fetch("/stress-test", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idea }),
+            body: JSON.stringify({ idea, mode }),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
