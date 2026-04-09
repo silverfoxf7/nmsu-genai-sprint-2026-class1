@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Founder Stress Tester</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --jungle-0: #061a10;
+        --jungle-1: #0c3d24;
+        --jungle-2: #1a6b3e;
+        --jungle-3: #2a9d5c;
+        --sun: #ffcc33;
+        --panel: rgba(6, 26, 16, 0.92);
+        --panel-border: #e8b923;
+        --gold: #f0d060;
+        --text: #e8f5e9;
+        --muted: #9ccc9c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "VT323", ui-monospace, monospace;
+        font-size: 1.35rem;
+        line-height: 1.45;
+        color: var(--text);
+        background: var(--jungle-0);
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      /* Subtle CRT-ish scanlines */
+      body::after {
+        content: "";
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        opacity: 0.06;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          #000 2px,
+          #000 3px
+        );
+      }
+
+      .bg-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .bg-layer svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        shape-rendering: crispEdges;
+      }
+
+      .wrap {
+        position: relative;
+        z-index: 1;
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 1.25rem 1rem 2.5rem;
+      }
+
+      .hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+
+      .hero-svg {
+        flex: 0 0 auto;
+        shape-rendering: crispEdges;
+        image-rendering: pixelated;
+        filter: drop-shadow(3px 4px 0 rgba(0, 0, 0, 0.45));
+      }
+
+      .hero-svg.jag-left {
+        transform: scaleX(-1);
+      }
+
+      .title-block {
+        text-align: center;
+        padding: 0.25rem 0.5rem;
+      }
+
+      h1 {
+        font-family: "Press Start 2P", monospace;
+        font-size: clamp(0.62rem, 2.8vw, 0.78rem);
+        line-height: 1.7;
+        margin: 0 0 0.75rem;
+        color: var(--gold);
+        text-shadow: 3px 3px 0 #1a0a00, -1px -1px 0 #2a1810;
+        letter-spacing: 0.02em;
+      }
+
+      .tagline {
+        margin: 0;
+        color: var(--muted);
+        font-size: 1.25rem;
+        max-width: 28em;
+        margin-inline: auto;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 4px solid var(--panel-border);
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35),
+          inset 0 0 0 2px rgba(42, 157, 92, 0.35);
+        padding: 1.25rem 1.25rem 1.5rem;
+        margin-top: 1.25rem;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        color: var(--gold);
+        font-size: 1.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 9rem;
+        padding: 0.65rem 0.75rem;
+        font-family: inherit;
+        font-size: 1.25rem;
+        background: #0a2418;
+        color: var(--text);
+        border: 3px solid var(--jungle-3);
+        border-radius: 0;
+        resize: vertical;
+        box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.35);
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: var(--sun);
+        box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.35),
+          0 0 0 2px rgba(255, 204, 51, 0.35);
+      }
+
+      button {
+        margin-top: 1rem;
+        padding: 0.65rem 1.25rem;
+        font-family: "Press Start 2P", monospace;
+        font-size: 0.55rem;
+        line-height: 1.6;
+        cursor: pointer;
+        background: linear-gradient(180deg, #ffdd55 0%, #e8b923 45%, #c99510 100%);
+        color: #1a1206;
+        border: 3px solid #1a0a00;
+        box-shadow: 4px 4px 0 #1a0a00;
+        text-transform: uppercase;
+      }
+
+      button:hover {
+        filter: brightness(1.08);
+      }
+
+      button:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 #1a0a00;
+      }
+
+      #out {
+        margin-top: 1.25rem;
+        white-space: pre-wrap;
+        background: #071810;
+        color: #b8e0c8;
+        padding: 1rem;
+        border: 3px solid var(--jungle-2);
+        font-size: 1.15rem;
+        min-height: 3rem;
+        box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.4);
+      }
+
+      .err {
+        color: #ff8a80;
+      }
+
+      .floor-jaguar {
+        display: block;
+        margin: 1.5rem auto 0;
+        max-width: min(100%, 420px);
+        height: auto;
+        shape-rendering: crispEdges;
+        image-rendering: pixelated;
+        filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.4));
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Full-viewport 8-bit jungle (SVG) -->
+    <div class="bg-layer" aria-hidden="true">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid slice"
+        viewBox="0 0 320 200"
+      >
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a3a6e" />
+            <stop offset="45%" stop-color="#2d5a8c" />
+            <stop offset="100%" stop-color="#0c3d24" />
+          </linearGradient>
+          <pattern id="leafpat" width="16" height="16" patternUnits="userSpaceOnUse">
+            <rect width="16" height="16" fill="#0a2818" />
+            <rect x="2" y="2" width="6" height="4" fill="#1a5c38" />
+            <rect x="10" y="8" width="4" height="6" fill="#145030" />
+            <rect x="6" y="12" width="5" height="3" fill="#2a9d5c" />
+          </pattern>
+        </defs>
+        <rect width="320" height="200" fill="url(#sky)" />
+        <rect y="120" width="320" height="80" fill="url(#leafpat)" opacity="0.85" />
+        <rect y="150" width="320" height="50" fill="#062010" />
+        <!-- Pixel sun -->
+        <g fill="#ffcc33">
+          <rect x="248" y="18" width="24" height="4" />
+          <rect x="244" y="22" width="32" height="4" />
+          <rect x="240" y="26" width="40" height="20" />
+          <rect x="244" y="46" width="32" height="4" />
+          <rect x="248" y="50" width="24" height="4" />
+        </g>
+        <g fill="#ffee88" opacity="0.9">
+          <rect x="252" y="30" width="16" height="12" />
+        </g>
+        <!-- Distant palms -->
+        <g fill="#0d4028">
+          <rect x="20" y="88" width="8" height="64" />
+          <rect x="12" y="72" width="24" height="8" />
+          <rect x="8" y="64" width="32" height="8" />
+          <rect x="16" y="56" width="16" height="8" />
+        </g>
+        <g fill="#145030">
+          <rect x="268" y="96" width="6" height="56" />
+          <rect x="262" y="84" width="18" height="6" />
+          <rect x="258" y="76" width="26" height="8" />
+        </g>
+        <!-- Vines -->
+        <g fill="#1a6b3e">
+          <rect x="140" y="0" width="4" height="100" />
+          <rect x="136" y="24" width="12" height="4" />
+          <rect x="132" y="48" width="20" height="4" />
+          <rect x="138" y="72" width="8" height="4" />
+          <rect x="88" y="0" width="4" height="80" />
+          <rect x="84" y="36" width="12" height="4" />
+        </g>
+        <!-- Big leaves -->
+        <g fill="#2a9d5c">
+          <rect x="0" y="100" width="40" height="12" />
+          <rect x="4" y="92" width="32" height="8" />
+          <rect x="280" y="108" width="40" height="10" />
+          <rect x="288" y="100" width="24" height="8" />
+        </g>
+        <g fill="#1e8048">
+          <rect x="0" y="112" width="28" height="8" />
+          <rect x="292" y="118" width="28" height="8" />
+        </g>
+        <!-- Ground jaguar silhouette (distant) -->
+        <g fill="#181818" opacity="0.35">
+          <rect x="160" y="138" width="48" height="8" />
+          <rect x="168" y="130" width="24" height="8" />
+          <rect x="200" y="132" width="8" height="6" />
+        </g>
+      </svg>
+    </div>
+
+    <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="pixel-jaguar-mini" viewBox="0 0 40 30">
+          <rect width="40" height="30" fill="transparent" />
+          <g fill="#e8b923">
+            <rect x="4" y="14" width="22" height="10" />
+            <rect x="24" y="10" width="12" height="12" />
+            <rect x="2" y="16" width="4" height="6" />
+            <rect x="0" y="18" width="4" height="4" />
+            <rect x="26" y="8" width="8" height="4" />
+            <rect x="30" y="6" width="6" height="6" />
+          </g>
+          <g fill="#f5e6b8">
+            <rect x="28" y="14" width="6" height="6" />
+            <rect x="8" y="18" width="10" height="4" />
+          </g>
+          <g fill="#181818">
+            <rect x="32" y="8" width="2" height="2" />
+            <rect x="30" y="12" width="4" height="2" />
+            <rect x="10" y="16" width="4" height="2" />
+            <rect x="16" y="18" width="3" height="2" />
+            <rect x="6" y="20" width="2" height="2" />
+            <rect x="14" y="14" width="2" height="2" />
+          </g>
+          <g fill="#ff8866">
+            <rect x="34" y="14" width="2" height="2" />
+          </g>
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="wrap">
+      <div class="hero">
+        <svg
+          class="hero-svg jag-left"
+          width="120"
+          height="90"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <use href="#pixel-jaguar-mini" width="40" height="30" />
+        </svg>
+
+        <div class="title-block">
+          <h1>Founder<br />Stress Tester</h1>
+          <p class="tagline">
+            Describe your startup idea. The server asks GPT-5 for assumptions, risks, and one fast
+            validation test.
+          </p>
+        </div>
+
+        <svg class="hero-svg" width="120" height="90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <use href="#pixel-jaguar-mini" width="40" height="30" />
+        </svg>
+      </div>
+
+      <div class="panel">
+        <label for="idea">Startup idea</label>
+        <textarea id="idea" placeholder="e.g. A subscription box for…"></textarea>
+        <button type="button" id="go">Run stress test</button>
+
+        <pre id="out" aria-live="polite"></pre>
+      </div>
+
+      <!-- Prominent stalking jaguar (larger pixel sprite) -->
+      <svg
+        class="floor-jaguar"
+        viewBox="0 0 64 36"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Pixel art jaguar"
+      >
+        <title>8-bit style jaguar</title>
+        <rect width="64" height="36" fill="transparent" />
+        <!-- body -->
+        <g fill="#d4a017">
+          <rect x="6" y="18" width="36" height="12" />
+          <rect x="38" y="14" width="18" height="14" />
+          <rect x="52" y="10" width="10" height="12" />
+          <rect x="4" y="20" width="6" height="8" />
+          <rect x="0" y="22" width="6" height="6" />
+          <rect x="54" y="8" width="8" height="6" />
+          <rect x="58" y="6" width="4" height="6" />
+        </g>
+        <!-- legs -->
+        <g fill="#b8890f">
+          <rect x="10" y="28" width="6" height="6" />
+          <rect x="22" y="28" width="6" height="6" />
+          <rect x="34" y="26" width="6" height="8" />
+          <rect x="44" y="26" width="6" height="8" />
+        </g>
+        <!-- belly -->
+        <g fill="#f0e0a8">
+          <rect x="14" y="22" width="20" height="6" />
+          <rect x="42" y="18" width="10" height="8" />
+        </g>
+        <!-- spots -->
+        <g fill="#181818">
+          <rect x="12" y="20" width="4" height="4" />
+          <rect x="22" y="18" width="4" height="4" />
+          <rect x="30" y="22" width="4" height="4" />
+          <rect x="18" y="24" width="3" height="3" />
+          <rect x="40" y="20" width="4" height="4" />
+          <rect x="48" y="16" width="4" height="4" />
+          <rect x="8" y="22" width="2" height="2" />
+        </g>
+        <!-- face -->
+        <g fill="#181818">
+          <rect x="56" y="10" width="2" height="2" />
+          <rect x="60" y="10" width="2" height="2" />
+          <rect x="58" y="14" width="4" height="2" />
+        </g>
+        <g fill="#ff9966">
+          <rect x="58" y="12" width="2" height="2" />
+        </g>
+        <!-- tail -->
+        <g fill="#d4a017">
+          <rect x="0" y="20" width="4" height="4" />
+          <rect x="0" y="16" width="4" height="4" />
+          <rect x="2" y="12" width="4" height="6" />
+          <rect x="4" y="10" width="4" height="4" />
+        </g>
+        <g fill="#181818">
+          <rect x="2" y="14" width="2" height="4" />
+          <rect x="4" y="12" width="2" height="2" />
+        </g>
+      </svg>
+    </div>
+
+    <script>
+      const ideaEl = document.getElementById("idea");
+      const outEl = document.getElementById("out");
+      const goBtn = document.getElementById("go");
+
+      goBtn.addEventListener("click", async () => {
+        outEl.textContent = "Loading…";
+        outEl.classList.remove("err");
+        const idea = ideaEl.value.trim();
+        try {
+          const res = await fetch("/stress-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idea }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            outEl.classList.add("err");
+            outEl.textContent = data.error || res.statusText || "Request failed";
+            return;
+          }
+          outEl.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+          outEl.classList.add("err");
+          outEl.textContent = String(e.message || e);
+        }
+      });
+    </script>
+  </body>
+</html>
